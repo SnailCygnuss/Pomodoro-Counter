@@ -1,14 +1,17 @@
 from asciimatics.screen import Screen
 from time import sleep
-from playsound import playsound
 import os
+import simpleaudio as sa
+from plyer import notification
 
 # TODO: Option to change timing limits
 p_counter = 0
-p_mins = 25     # Pomodoro minutes
-b_mins = 5      # Short Break minutes
-l_mins = 15     # Long Break minutes
-alarm_file = os.path.join(os.path.dirname(__file__), 'alarm1.mp3')
+p_mins = 25  # Pomodoro minutes
+b_mins = 5  # Short Break minutes
+l_mins = 15  # Long Break minutes
+alarm_file = os.path.join(os.path.dirname(__file__), 'bell.wav')
+icon_file = os.path.join(os.path.dirname(__file__), 'tomato.ico')
+
 
 def main_screen(screen):
     global p_counter
@@ -18,9 +21,9 @@ def main_screen(screen):
     while True:
         screen.print_at('Pomodoro Counter', 0, 0)
         screen.print_at('Number of Pomodoros - ' + str(p_counter), 0, 4)
-        screen.print_at('(S) - Start Pomodoro', 0, 6)
-        screen.print_at('(B) - Start Short Break', 0, 7)
-        screen.print_at('(L) - Start Long Break', 0, 8)
+        screen.print_at(f'(S) - Start Pomodoro - {p_mins} mins', 0, 6)
+        screen.print_at(f'(B) - Start Short Break - {b_mins} mins', 0, 7)
+        screen.print_at(f'(L) - Start Long Break - {l_mins} mins', 0, 8)
         screen.print_at('(Q) - Quit', 0, 9)
         screen.refresh()
         ev = screen.get_key()
@@ -38,7 +41,6 @@ def main_screen(screen):
 def starttimer(screen, tmins, tsecs, flag):
     # flag - indicate work (1) or break (0)
     # TODO: Add different coloured text for work or break
-    # TODO: Play sound at end of timer
     global p_counter
     if flag == 1:
         screen.print_at('Time to Work !!!', 0, 0)
@@ -65,7 +67,8 @@ def starttimer(screen, tmins, tsecs, flag):
             # Increment counter if work (1)
             if flag == 1:
                 p_counter = p_counter + 1
-            playsound(alarm_file)
+            #playsound()
+            notify(flag)
             return
 
 
@@ -88,6 +91,28 @@ def timestring(minute, second):
     second = f'{second:02d}'
     tstring = minute + ':' + second
     return tstring
+
+
+def playsound():
+    # Play sound at the end of timer
+    wave_obj = sa.WaveObject.from_wave_file(alarm_file)
+    play_obj = wave_obj.play()
+    play_obj.wait_done()
+    return True
+
+
+def notify(flag):
+    # Function to add notification
+    title_str = 'Pomodoro Timer'
+    next_obj = 'work' if flag == 0 else 'break'
+    message_str = 'End of timer. Time for ' + next_obj + '!!!'
+    notification.notify(
+        title=title_str,
+        message=message_str,
+        app_icon=icon_file,
+        timeout=5,
+    )
+    return True
 
 
 Screen.wrapper(main_screen)
