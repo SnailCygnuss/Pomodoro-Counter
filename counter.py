@@ -42,6 +42,7 @@ def starttimer(screen, tmins, tsecs, flag):
     # flag - indicate work (1) or break (0)
     # TODO: Add different coloured text for work or break
     global p_counter
+    screen.clear()
     if flag == 1:
         screen.print_at('Time to Work !!!', 0, 0)
     elif flag == 0:

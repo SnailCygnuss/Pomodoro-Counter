@@ -1,0 +1,5 @@
+[Pomodoro Settings]
+pomodoro interval = 5
+short break = 2
+long break = 10
+number of pomodoro = 2
