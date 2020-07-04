@@ -11,14 +11,17 @@ def screen_notification(task):
     elif "Break" in task:
         nxt_activity = "Pomodoro"
     msg_str = f'End of {task}. Time for {nxt_activity}'
-    icon_file = os.path.join(os.path.dirname(__file__), 'tomato.ico')
     notification.notify(
         title=title_str,
         message=msg_str,
-        app_icon=icon_file,
+        app_icon=icon_path(),
         timeout=3
     )
     return True
+
+
+def icon_path():
+    return os.path.join(os.path.dirname(__file__), 'tomato.ico')
 
 
 if __name__ == "__main__":

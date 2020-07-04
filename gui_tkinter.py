@@ -3,7 +3,7 @@ import tkinter.ttk
 from resumabletimer import ResumableTimer
 from threading import Event, Thread
 import configparser
-from common import screen_notification
+from common import screen_notification, icon_path
 
 
 class PomodoroApplication(tkinter.ttk.Frame):
@@ -12,12 +12,13 @@ class PomodoroApplication(tkinter.ttk.Frame):
         self.master = master
         # Configure the root frame
         self.master.configure(bg="#121212")
+        self.master.iconbitmap(icon_path())
         # Define the style for the GUI
         self.style = tkinter.ttk.Style()
         self.set_style()
         self.pack(padx=5, pady=5)
         master.protocol("WM_DELETE_WINDOW", self.on_exit)
-        test = True
+        test = False
         if test:
             settings_file = 'test-settings.txt'
         else:
@@ -71,8 +72,7 @@ class PomodoroApplication(tkinter.ttk.Frame):
             # Display notification
             screen_notification(self.current_activity)
             # Enable start button and disable pause button
-            button_pause['state'] = tkinter.DISABLED
-            button_start['state'] = tkinter.NORMAL
+            toggle_run_buttons()
 
             # Find next activity
             self.nums_completed[self.current_activity] = self.nums_completed[self.current_activity] + 1
@@ -94,18 +94,28 @@ class PomodoroApplication(tkinter.ttk.Frame):
         self.cancel_timer_refresh = None
 
         # TODO: Make timer and status in different frames
+        config_frame = tkinter.ttk.Frame(self)
+        config_frame.grid(row=1, column=0, columnspan=2, pady=10, padx=10)
+
         status_frame = tkinter.ttk.Frame(self)
-        status_frame.pack(side=tkinter.LEFT, fill=tkinter.BOTH, expand=True)
+        status_frame.grid(row=0, column=0, pady=10, padx=10)
 
         button_frame = tkinter.ttk.Frame(self)
-        button_frame.pack(side=tkinter.LEFT, fill=tkinter.BOTH, expand=True)
+        button_frame.grid(row=0, column=1, pady=10, padx=10)
 
+        def finish_time():
+            if self.timer_obj.status == "Running":
+                end_time = str(self.timer_obj.target).split()[1].split(".")[0].split(":")
+                end_time = end_time[0] + ":" + end_time[1]
+                return f'{self.timer_obj.status} - Ends at {end_time}'
+            elif (self.timer_obj.status == "Not Started") or (self.timer_obj.status is None):
+                return self.timer_obj.status
         # Display the Timer
-        label_timer = tkinter.ttk.Label(status_frame, text=self.timer_obj.time_remaining())
+        label_timer = tkinter.ttk.Label(status_frame, text=self.timer_obj.time_remaining(), style="Timer.TLabel")
         label_timer.pack()
 
         # Display the Status
-        label_status = tkinter.ttk.Label(status_frame, text=self.timer_obj.status)
+        label_status = tkinter.ttk.Label(status_frame, text=finish_time())
         label_status.pack(side=tkinter.TOP)
 
         # Display Timer end time
@@ -126,30 +136,57 @@ class PomodoroApplication(tkinter.ttk.Frame):
 
         # Timer starting function of any length
         def start_timer(timer_length):
+            # Stop existing timer
+            if self.timer_obj.status == "Running":
+                self.timer_obj.pause()
+                if self.cancel_timer_refresh is not None:
+                    self.cancel_timer_refresh()
             self.timer_obj = ResumableTimer(timer_length, timer_finish)
             self.timer_obj.start()
             # Update timer and status label
             label_timer_update()
             # Disable start button and enable pause button
-            button_pause['state'] = tkinter.NORMAL
-            button_start['state'] = tkinter.DISABLED
+            toggle_run_buttons()
             # Start thread to update timer every 1 second
             self.cancel_timer_refresh = timer_refresh()
 
+        def toggle_run_buttons():
+            if self.timer_obj.status == "Running":
+                button_pause['state'] = tkinter.NORMAL
+            elif self.timer_obj.status == "Not Started" or self.timer_obj.status == "Paused":
+                button_pause['state'] = tkinter.DISABLED
+
+        # TODO: Make option of auto start between pomodoros and breaks
         # Start activity button
         def start_activity():
             start_timer(self.length[self.current_activity])
 
-        button_start = tkinter.ttk.Button(self, text="Start Next Activity", command=start_activity)
-        button_start.pack(padx=5, pady=5)
+        # button_start = tkinter.ttk.Button(self, text="Start Next Activity", command=start_activity)
+        # button_start.pack(padx=5, pady=0)
 
         # Start pomodoro button
         def start_pomo():
             self.current_activity = "Pomodoro"
             start_timer(self.length["Pomodoro"])
 
-        button_start_pomo = tkinter.ttk.Button(self, text="Start Pomodoro", command=start_pomo)
-        button_start_pomo.pack(padx=5, pady=5)
+        button_start_pomo = tkinter.ttk.Button(button_frame, text="Start Pomodoro", command=start_pomo)
+        button_start_pomo.pack(fill=tkinter.X, padx=5, pady=0)
+
+        # Start short break button
+        def start_sbreak():
+            self.current_activity = "Short Break"
+            start_timer(self.length["Short Break"])
+
+        button_start_sbreak = tkinter.ttk.Button(button_frame, text="Start Short Break", command=start_sbreak)
+        button_start_sbreak.pack(fill=tkinter.X, padx=5, pady=0)
+
+        # Start long break button
+        def start_lbreak():
+            self.current_activity = "Long Break"
+            start_timer(self.length["Long Break"])
+
+        button_start_lbreak = tkinter.ttk.Button(button_frame, text="Start Long Break", command=start_lbreak)
+        button_start_lbreak.pack(fill=tkinter.X, padx=5, pady=0)
 
         # Pause / Resume Button
         def pause_timer():
@@ -170,24 +207,40 @@ class PomodoroApplication(tkinter.ttk.Frame):
                 # Start thread to update timer every 1 second
                 self.cancel_timer_refresh = timer_refresh()
 
-        button_pause = tkinter.ttk.Button(self, text="Pause", command=pause_timer, state=tkinter.DISABLED)
-        button_pause.pack(padx=5, pady=5)
+        button_pause = tkinter.ttk.Button(button_frame, text="Pause", command=pause_timer, state=tkinter.DISABLED)
+        button_pause.pack(fill=tkinter.X, padx=5, pady=0)
 
-        # Reset Button
-        def reset_timer():
+        # Statistics Button
+        # TODO: Add statistics window
+        def display_stats():
             pass
-        button_reset = tkinter.ttk.Button(self, text="Reset", command=reset_timer)
-        button_reset.pack(padx=5, pady=5)
 
+        button_stats = tkinter.ttk.Button(config_frame, text="Statistics", command=display_stats)
+        button_stats.grid(column=0, row=0, padx=5)
+
+        # Settings Button
+        # TODO: Add settings window
+        def display_settings():
+            pass
+        button_settings = tkinter.ttk.Button(config_frame, text="Settings", command=display_settings)
+        button_settings.grid(column=1, row=0, padx=5)
+
+        # Help Button
+        # TODO: Add help window
         def help_menu():
             pass
-        button_help = tkinter.ttk.Button(self, text="Help", command=help_menu)
-        button_help.pack(padx=5, pady=5)
+        button_help = tkinter.ttk.Button(config_frame, text="Help", command=help_menu)
+        button_help.grid(column=2, row=0, padx=5)
+
+        button_exit = tkinter.ttk.Button(config_frame, text="Exit", command=self.on_exit)
+        button_exit.grid(column=3, row=0, padx=5)
+
+        # TODO: Add keyboard shoertcuts
 
         # Function to update timer label
         def label_timer_update():
             label_timer.configure(text=self.timer_obj.time_remaining())
-            label_status.configure(text=self.timer_obj.status)
+            label_status.configure(text=finish_time())
             label_activity['text'] = get_activity_text()
 
         # Function to call timer label update every second
@@ -201,7 +254,7 @@ class PomodoroApplication(tkinter.ttk.Frame):
             return stopped.set
 
     def on_exit(self):
-        # Funtion to execute on closing the program
+        # Function to execute on closing the program
         if self.cancel_timer_refresh is not None:
             self.cancel_timer_refresh()
         if self.timer_obj.status is "Running":
@@ -212,11 +265,12 @@ class PomodoroApplication(tkinter.ttk.Frame):
         # TODO: Fix button colours
         self.style.configure("TButton",
                              foreground="black",
-                             background="#90CAF9",
-                             width=20)
+                             background="#90CAF9")
         self.style.map("TButton", foreground=[],
-                       background=[("active","#FFFFFF")])
-        self.style.configure("TLabel", width=20, background="#121212", foreground="#FFFFFF")
+                       background=[("disabled","#2196F3")])
+        self.style.configure("TLabel", background="#121212", foreground="#FFFFFF",
+                             font="Verdana 10", anchor=tkinter.CENTER)
+        self.style.configure("Timer.TLabel", justify=tkinter.CENTER, font="Verdana 40")
         self.style.configure("TFrame", background="#121212")
 
 
@@ -230,7 +284,6 @@ def readconfig(file):
 
 def main():
     root = tkinter.Tk()
-    #root.configure(background="#121212")
     # root.geometry("400x400+500+500")
     screen = PomodoroApplication(root)
 
