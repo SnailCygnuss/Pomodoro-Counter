@@ -31,9 +31,20 @@ class ResumableTimer:
     def time_remaining(self):
         # Return a string of format HH:MM:SS
         if self.target is None:
-            return str(self.timer_remaining).split(".")[0]
+            hh_mm_ss = str(self.timer_remaining).split(".")[0]
+            return display_time_string(hh_mm_ss)
         else:
-            return str(self.target - datetime.datetime.now()).split(".")[0]
+            hh_mm_ss = str(self.target - datetime.datetime.now()).split(".")[0]
+            return display_time_string(hh_mm_ss)
+
+
+def display_time_string(hh_mm_ss):
+    if hh_mm_ss.startswith("0"):
+        hh_mm_ss = hh_mm_ss.split(":")
+        time_str = hh_mm_ss[1] + ":" + hh_mm_ss[2]
+    else:
+        time_str = hh_mm_ss
+    return time_str
 
 
 def finish_func():
